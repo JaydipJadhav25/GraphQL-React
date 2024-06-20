@@ -4,6 +4,7 @@ Apollo Client works seamlessly with these GraphOS router supported features:
 Create a new React project locally with Vite, or
 Create a new React sandbox on CodeSandbox.
 
+
  # Step 2: Install dependencies
 Applications that use Apollo Client require two top-level dependencies:
 
