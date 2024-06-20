@@ -1,70 +1,134 @@
-# Getting Started with Create React App
+# Get started with Apollo Client
+Apollo Client works seamlessly with these GraphOS router supported features:
+# Step 1: Setup 
+Create a new React project locally with Vite, or
+Create a new React sandbox on CodeSandbox.
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+ # Step 2: Install dependencies
+Applications that use Apollo Client require two top-level dependencies:
 
-## Available Scripts
+@apollo/client: This single package contains virtually everything you need to set up Apollo Client. It includes the in-memory cache, local state management, error handling, and a React-based view layer.
+graphql: This package provides logic for parsing GraphQL queries.
+Run the following command to install both of these packages:
 
-In the project directory, you can run:
+npm install @apollo/client graphql
 
-### `npm start`
+If you're using a React sandbox from CodeSandbox and you encounter a TypeError, try downgrading the version of the graphql package to 15.8.0 in the Dependencies panel. If you encounter a different error after downgrading, refresh the page.
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+# Step 3: Initialize ApolloClient
+With our dependencies set up, we can now initialize an ApolloClient instance.
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+In main.jsx, let's first import the symbols we need from @apollo/client:
 
-### `npm test`
+import { ApolloClient, InMemoryCache, ApolloProvider, gql } from '@apollo/client';
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+Next we'll initialize ApolloClient, passing its constructor a configuration object with the uri and cache fields:
+const client = new ApolloClient({
+  uri: 'https://flyby-router-demo.herokuapp.com/',
+  cache: new InMemoryCache(),
+});
 
-### `npm run build`
+uri specifies the URL of our GraphQL server.
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+cache is an instance of InMemoryCache, which Apollo Client uses to cache query results after fetching them.
+That's it! Our client is ready to start fetching data. Now before we start using Apollo Client with React, let's first try sending a query with plain JavaScript.
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+In the same main.jsx file, call client.query() with the query string (wrapped in the gql template literal) shown below:
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+// const client = ...
 
-### `npm run eject`
+client
+  .query({
+    query: gql`
+      query GetLocations {
+        locations {
+          id
+          name
+          description
+          photo
+        }
+      }
+    `,
+  })
+  .then((result) => console.log(result));
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+  Run this code, open your console, and inspect the result object. You should see a data property with locations attached, along with some other properties like loading and networkStatus. Nice!
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+Although executing GraphQL operations directly like this can be useful, Apollo Client really shines when it's integrated with a view layer like React. You can bind queries to your UI and update it automatically as new data is fetched.
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+Let's look at how that works!
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+# Step 4: Connect your client to React
+You connect Apollo Client to React with the ApolloProvider component. Similar to React's Context.Provider, ApolloProvider wraps your React app and places Apollo Client on the context, enabling you to access it from anywhere in your component tree.
 
-## Learn More
+In main.jsx, let's wrap our React app with an ApolloProvider. We suggest putting the ApolloProvider somewhere high in your app, above any component that might need to access GraphQL data.
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+import React from 'react';
+import * as ReactDOM from 'react-dom/client';
+import { ApolloClient, InMemoryCache, ApolloProvider } from '@apollo/client';
+import App from './App';
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+const client = new ApolloClient({
+  uri: 'https://flyby-router-demo.herokuapp.com/',
+  cache: new InMemoryCache(),
+});
 
-### Code Splitting
+// Supported in React 18+
+const root = ReactDOM.createRoot(document.getElementById('root'));
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+root.render(
+  <ApolloProvider client={client}>
+    <App />
+  </ApolloProvider>,
+);
 
-### Analyzing the Bundle Size
+# Step 5: Fetch data with useQuery
+After your ApolloProvider is hooked up, you can start requesting data with useQuery.
+The useQuery hook is a React hook that shares GraphQL data with your UI.
+Switching over to our App.jsx file, we'll start by replacing our existing file contents with the code snippet below:
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
+// Import everything needed to use the `useQuery` hook
+import { useQuery, gql } from '@apollo/client';
 
-### Making a Progressive Web App
+export default function App() {
+  return (
+    <div>
+      <h2>My first Apollo app 🚀</h2>
+    </div>
+  );
+}
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
+We can define the query we want to execute by wrapping it in the gql template literal:
 
-### Advanced Configuration
+const GET_LOCATIONS = gql`
+  query GetLocations {
+    locations {
+      id
+      name
+      description
+      photo
+    }
+  }
+`;
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
+Next, let's define a component named DisplayLocations that executes our GET_LOCATIONS query with the useQuery hook:
 
-### Deployment
+function DisplayLocations() {
+  const { loading, error, data } = useQuery(GET_LOCATIONS);
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
+  if (loading) return <p>Loading...</p>;
+  if (error) return <p>Error : {error.message}</p>;
 
-### `npm run build` fails to minify
+  return data.locations.map(({ id, name, description, photo }) => (
+    <div key={id}>
+      <h3>{name}</h3>
+      <img width="400" height="250" alt="location-reference" src={`${photo}`} />
+      <br />
+      <b>About this location:</b>
+      <p>{description}</p>
+      <br />
+    </div>
+  ));
+}
+When your app reloads, you should briefly see a loading indicator, followed by a list of locations and details about those locations! If you don't, you can compare your code against th
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
